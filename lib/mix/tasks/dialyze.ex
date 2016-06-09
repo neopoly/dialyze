@@ -93,7 +93,7 @@ defmodule Mix.Tasks.Dialyze do
   defp parse_args(args) do
     warn_switches = Enum.map(@no_warnings ++ @warnings, &{&1, :boolean})
     switches = [compile: :boolean, check: :boolean, analyse: :boolean] ++
-      warn_switches
+      [categorized: :boolean] ++ warn_switches
     {opts, _, _} = OptionParser.parse(args, [strict: switches])
     {make_fun(opts), prepare_fun(opts), analysis_fun(opts), warnings_list(opts),
       print_fun(opts)}
@@ -127,8 +127,11 @@ defmodule Mix.Tasks.Dialyze do
     warnings ++ no_warnings
   end
 
-  defp print_fun(_opts) do
-    &print_warnings/1
+  defp print_fun(opts) do
+    case Keyword.get(opts, :categorized, true) do
+      true -> &Dialyze.Formatter.Categorized.print_warnings/1
+      false -> &print_warnings/1
+    end
   end
 
   defp no_compile(), do: :ok
