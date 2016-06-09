@@ -6,6 +6,9 @@ defmodule Dialyze.Formatter.Categorized do
   def print_warnings(warnings) do
     warnings
     |> Enum.map(&cast_warning/1)
+    |> Enum.sort_by(&(&1.category))
+    # |> Enum.group_by
+    # |> Enum.take 5
     |> Enum.each(&format_warning/1)
     :ok
   end
