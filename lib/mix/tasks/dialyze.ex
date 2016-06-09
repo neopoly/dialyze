@@ -73,7 +73,7 @@ defmodule Mix.Tasks.Dialyze do
 
   @spec run(OptionParser.argv) :: :ok
   def run(args) do
-    {make, prepare, analysis, warnings} = parse_args(args)
+    {make, prepare, analysis, warnings, print} = parse_args(args)
     info("Finding applications for analysis")
     {mods, deps} = get_info(make)
     try do
@@ -82,7 +82,7 @@ defmodule Mix.Tasks.Dialyze do
     else
       [] -> :ok
       [_|_] = warnings ->
-        print_warnings(warnings)
+        print.(warnings)
         Mix.raise "Dialyzer reported #{length(warnings)} warnings"
     catch
       :throw, {:dialyzer_error, reason} ->
@@ -95,7 +95,8 @@ defmodule Mix.Tasks.Dialyze do
     switches = [compile: :boolean, check: :boolean, analyse: :boolean] ++
       warn_switches
     {opts, _, _} = OptionParser.parse(args, [strict: switches])
-    {make_fun(opts), prepare_fun(opts), analysis_fun(opts), warnings_list(opts)}
+    {make_fun(opts), prepare_fun(opts), analysis_fun(opts), warnings_list(opts),
+      print_fun(opts)}
   end
 
   defp make_fun(opts) do
@@ -124,6 +125,10 @@ defmodule Mix.Tasks.Dialyze do
     no_warnings = Enum.filter_map(@no_warnings,
       &(not Keyword.get(opts, &1, true)), &String.to_atom("no_#{&1}"))
     warnings ++ no_warnings
+  end
+
+  defp print_fun(_opts) do
+    &print_warnings/1
   end
 
   defp no_compile(), do: :ok
