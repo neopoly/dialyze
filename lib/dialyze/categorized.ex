@@ -60,15 +60,56 @@ defmodule Dialyze.Formatter.Categorized do
     puts [:faint, "  #{filename}:#{line}"]
   end
 
+  defp format_details(%Warning{
+                        category: :warn_matching,
+                        metadata: {:pattern_match, ['pattern ' ++ lhs, rhs]}
+                      }) do
+
+    "The pattern #{code lhs} can never match the type #{code rhs}"
+  end
+
+  defp format_details(%Warning{
+                        category: :warn_matching,
+                        metadata: {
+                          :pattern_match_cov, ['variable ' ++ lhs, rhs]}
+                      }) do
+
+    "The variable #{code lhs} can never match since previous clauses " <>
+      "completely covered the type #{code rhs}"
+  end
+
+
   # Fallback to original implementation
-  defp format_details(%Warning{original: warning}) do
-    :dialyzer.format_warning(warning, :fullpath)
-    |> IO.chardata_to_string()
-    |> String.replace(~r{^.*?(\S+)\s}, "")
-    |> String.strip
+  defp format_details(%Warning{original: warning, metadata: metadata}) do
+    original_warning =
+      warning
+      |> :dialyzer.format_warning(:fullpath)
+      |> IO.chardata_to_string()
+      |> String.replace(~r{^.*?(\S+)\s}, "")
+      |> String.strip
+
+    original_metadata = inspect(metadata) |> code
+
+    "#{original_warning}\n  #{original_metadata}"
   end
 
   defp puts, do: IO.puts ""
   defp puts(string) when is_binary(string), do: IO.puts string
   defp puts(args) when is_list(args), do: IO.ANSI.format(args) |> IO.puts
+
+  defp colorize(color, args), do: IO.ANSI.format([color, to_string args])
+
+  defp code(value) do
+    colorize :cyan, atomize value
+  end
+
+  defp atomize(string) when is_binary(string), do: string
+
+  defp atomize('_' ++ _rest = charlist) when is_list(charlist) do
+    charlist
+  end
+
+  defp atomize(charlist) when is_list(charlist) do
+    ":#{charlist |> IO.chardata_to_string |> String.replace("'", "")}"
+  end
 end
